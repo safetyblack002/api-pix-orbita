@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento via Pix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                name: params.get("name") || "Usuário",
+                email: params.get("email") || "sememail@example.com",
+                telephone: params.get("telephone") || "00000000000",
+                document: params.get("document") || "00000000000",
+                frete: params.get("frete") || "pac",
+                valor: params.get("valor") || "27.97",
+                prazo: params.get("prazo") || "10"
+            };
+        }
+
+        async function gerarPix() {
+            const userData = getQueryParams();
+            document.getElementById("user-name").textContent = userData.name;
+            document.getElementById("frete-info").innerHTML = `🚚 <strong>Entrega via ${userData.frete.toUpperCase()} em ${userData.prazo} dias úteis</strong>`;
+            document.getElementById("valor-pix").textContent = `R$ ${userData.valor}`;
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/gerar_pix", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        nome: userData.name,
+                        email: userData.email,
+                        telefone: userData.telephone,
+                        cpf: userData.document,
+                        valor: parseFloat(userData.valor)
+                    })
+                });
+
+                const data = await response.json();
+                console.log("Resposta da API:", data);
+
+                if (response.ok) {
+                    const pixCode = data.qr_code;
+                    
+                    document.getElementById("pix_qrcode").src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixCode)}`;
+                    document.getElementById("pix_qrcode").style.display = "block";
+                    
+                    document.getElementById("pix_key").textContent = pixCode;
+                    document.getElementById("copy-button").style.display = "block";
+                } else {
+                    alert("Erro ao gerar Pix: " + (data.erro.message || JSON.stringify(data.erro)));
+                }
+            } catch (error) {
+                console.error("Erro na requisição:", error);
+                alert("Erro ao conectar com o servidor!");
+            }
+        }
+
+        function copiarPix() {
+            const pixCode = document.getElementById("pix_key").textContent;
+            navigator.clipboard.writeText(pixCode).then(() => {
+                alert("Chave Pix copiada!");
+            });
+        }
+
+        window.onload = gerarPix;
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .btn-copiar {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            background-color: #00f6ff;
+            color: black;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+        .btn-copiar:hover {
+            background-color: #00e0e0;
+        }
+        .aviso {
+            background-color: #fff9c4;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 12px;
+            color: #333;
+            margin-top: 20px;
+        }
+        .user-container {
+            width: 100%;
+            background-color: #f1f1f1;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border-radius: 0;
+            margin: 0;
+            box-sizing: border-box;
+            padding-left: 38px;
+        }
+        .user-container img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        .banner {
+            width: 100%;
+            display: block;
+        }
+        .titulo-menor {
+            font-size: 1rem; /* Diminuído um pouco */
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen bg-gray-100">
+    <!-- Imagem do cabeçalho restaurada -->
+    <img src="https://media.atomicatpages.net/u/fp9cDWhAeoVIbXcYo3cuHLJWDyj1/Pictures/LdyDJb3451579.png" alt="Banner" class="banner">
+
+    <!-- Container de usuário restaurado e alinhado à esquerda -->
+    <div class="user-container">
+        <img src="https://cdn-icons-png.flaticon.com/512/456/456212.png" alt="Ícone de usuário">
+        <span>Olá, <span id="user-name"></span></span>
+    </div>
+
+    <div class="container">
+        <p id="frete-info" class="text-lg text-gray-700 mb-2"></p>
+        <h2 class="titulo-menor font-bold text-gray-800">Realize o pagamento via PIX</h2>
+
+        <p class="text-lg font-semibold text-gray-600 mt-2">Valor: <span id="valor-pix"></span></p>
+
+        <div class="flex justify-center mt-4">
+            <img id="pix_qrcode" src="" alt="QR Code Pix" class="w-48 h-48 hidden">
+        </div>
+
+        <p class="mt-4 font-semibold text-gray-700">Chave Pix:</p>
+        <p id="pix_key" class="text-gray-600 text-sm break-words"></p>
+
+        <button id="copy-button" onclick="copiarPix()" class="btn-copiar hidden">
+            Copiar PIX
+        </button>
+
+        <p class="text-gray-600 font-bold mt-3">Após o pagamento seu cartão virtual será liberado para uso imediato</p>
+
+        <div class="aviso">
+            ⚠️ Caso você não pague esta taxa entenderemos que você não deseja receber seu cartão e cancelaremos seu limite de R$ 7.000,00
+        </div>
+    </div>
+</body>
+</html>
